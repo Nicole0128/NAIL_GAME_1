@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IG 美甲盲測：你預約到誰？</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+    :root {
+        --warm-white: #FAF8F5;
+        --ivory: #EDE8DF;
+        --cream: #F7F3ED;
+        --nude: #D4C4B0;
+        --blush-mist: #E8D5CB;
+        --dusty-rose: #C9A99A;
+        --text-dark: #2C2520;
+        --text-mid: #5C4F46;
+        --text-light: #8C7D74;
+        
+        --serif: 'Noto Serif TC', serif;
+        --sans: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+        font-family: var(--sans);
+        background-color: var(--warm-white);
+        color: var(--text-dark);
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    .game-container {
+        width: 100%;
+        max-width: 900px;
+        min-height: 600px;
+        background-color: var(--cream);
+        border: 1px solid var(--ivory);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(44, 37, 32, 0.05);
+        padding: 2.5rem;
+        position: relative;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    h1, h2, h3 { font-family: var(--serif); }
+
+    /* 通用按鈕 */
+    .btn {
+        background-color: var(--text-dark);
+        color: var(--warm-white);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-family: var(--sans);
+        letter-spacing: 0.1em;
+        transition: background-color 0.2s, opacity 0.2s;
+    }
+    .btn:hover { background-color: var(--text-mid); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline {
+        background-color: transparent;
+        color: var(--text-dark);
+        border: 1px solid var(--text-dark);
+    }
+    .btn-outline:hover { background-color: var(--ivory); }
+
+    /* 動畫 */
+    .fade-in { animation: fadeIn 0.5s ease-in forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .hidden { display: none !important; }
+    
+    /* 1. 修改為呼吸發光特效 */
+    .pulse-clue {
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s;
+        border-radius: 8px;
+    }
+    .pulse-clue::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: 0 0 10px 4px rgba(201, 169, 154, 0.8);
+        animation: glowPulse 1.5s infinite alternate;
+        pointer-events: none;
+        z-index: 10;
+    }
+    .pulse-clue.investigated::after { display: none; }
+    .pulse-clue.investigated { opacity: 0.7; transform: scale(0.98); }
+    
+    @keyframes glowPulse {
+        0% { box-shadow: 0 0 5px 2px rgba(201, 169, 154, 0.4); }
+        100% { box-shadow: 0 0 15px 6px rgba(201, 169, 154, 0.9); }
+    }
+
+    /* --- Modal --- */
+    .modal-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(44, 37, 32, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 50;
+        padding: 1.5rem;
+    }
+    .modal-content {
+        background: var(--warm-white);
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border: 1px solid var(--dusty-rose);
+    }
+
+    /* --- 選單畫面 --- */
+    .profiles-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+    }
+    .profile-card {
+        background-color: white;
+        border: 1px solid var(--ivory);
+        border-radius: 12px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+    .profile-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(201, 169, 154, 0.2);
+        border-color: var(--dusty-rose);
+    }
+    
+    /* 大頭貼共用設定 */
+    .avatar {
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        display: flex; justify-content: center; align-items: center;
+        font-family: var(--serif); font-size: 1.5rem;
+        margin: 0 auto 1rem; color: var(--text-dark);
+    }
+
+    /* --- 調查畫面 (Profile View) --- */
+    .ig-header { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--ivory); }
+    .ig-stats { display: flex; gap: 1rem; font-size: 0.85rem; color: var(--text-dark); }
+    .ig-stats div { text-align: center; }
+    .ig-stats span { font-weight: bold; display: block; font-size: 1.1rem; }
+    .ig-bio { font-size: 0.85rem; color: var(--text-mid); line-height: 1.6; margin-bottom: 1.5rem; padding: 0.5rem; border-radius: 8px; }
+    .ig-highlights { display: flex; gap: 1.25rem; margin: 0 -0.5rem 1.5rem -0.5rem; padding: 0.65rem 0.5rem; }
+    .highlight-circle { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--dusty-rose); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--text-light); }
+    .ig-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .ig-photo { aspect-ratio: 1; background-color: var(--nude); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: white; border-radius: 4px; }
+
+    /* --- 聊天畫面 --- */
+    .chat-box {
+        background: white; border: 1px solid var(--ivory); border-radius: 12px;
+        height: 350px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .chat-header { background: var(--warm-white); padding: 1rem; border-bottom: 1px solid var(--ivory); font-weight: bold; text-align: center; }
+    .chat-messages { flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+    .bubble { max-width: 75%; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; }
+    .bubble.me { background: var(--dusty-rose); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .bubble.them { background: var(--ivory); color: var(--text-dark); align-self: flex-start; border-bottom-left-radius: 4px; }
+    .typing { display: flex; gap: 4px; padding: 0.5rem 1rem; background: var(--ivory); border-radius: 12px; width: fit-content; align-self: flex-start; }
+    .dot { width: 6px; height: 6px; background: var(--text-light); border-radius: 50%; animation: blink 1.4s infinite both; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+    
+    /* 確保手機版邊距 */
+    @media (max-width: 640px) {
+        .game-container { padding: 1.5rem; margin: 1rem; border-radius: 8px; }
+        .ig-header { flex-direction: column; text-align: center; }
+    }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+    
+    <!-- 1. 首頁 -->
+    <div id="start-screen" class="fade-in text-center py-10">
+        <span class="inline-block bg-[#E8D5CB] text-[#2C2520] px-4 py-1 rounded-full text-xs tracking-widest mb-6">沉浸式調查遊戲</span>
+        <h1 class="text-3xl md:text-4xl font-bold mb-6 text-[#2C2520] leading-tight">滑 IG 找美甲師，<br>你真的懂得避雷嗎？</h1>
+        <p class="text-[#5C4F46] mb-10 max-w-md mx-auto leading-relaxed text-sm">
+            這週末你想做個漂亮的指甲。<br>
+            眼前有三個不同風格的美甲工作室，<br>
+            你要進入他們的社群平台中找尋線索並與他們實際溝通。<br>
+            不要放過任何蛛絲馬跡!<br>
+            你的觀察力，決定了這是一場完美體驗，還是花錢受罪。
+        </p>
+        <button class="btn" onclick="showScreen('selection-screen')">開始搜查</button>
+    </div>
+
+    <!-- 2. 選擇帳號畫面 -->
+    <div id="selection-screen" class="hidden fade-in py-6">
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-bold text-[#2C2520]">你想進一步調查哪家工作室？</h2>
+            <p class="text-sm text-[#8C7D74] mt-2">點擊卡片進入主頁查看細節。</p>
+        </div>
+
+        <div class="profiles-grid">
+            <div class="profile-card" onclick="openProfile('A')">
+                <div class="avatar bg-[#C9A99A] overflow-hidden relative">
+                    <img src="images/avatar_A.jpg" alt="M" class="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" onerror="this.style.opacity=0">
+                    <span class="text-white relative z-0">M</span>
+                </div>
+                <div class="font-bold text-[#2C2520] mb-1">Mia_Nails_Art</div>
+                <div class="text-xs text-[#8C7D74] mb-4">粉絲: 18.5k | 仙女製造機</div>
+                <button class="text-sm font-medium text-[#C9A99A]">進入主頁</button>
+            </div>
+            <div class="profile-card" onclick="openProfile('B')">
+                <div class="avatar bg-[#EDE8DF] overflow-hidden relative">
+                    <img src="images/avatar_B.jpg" alt="K" class="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" onerror="this.style.opacity=0">
+                    <span class="text-[#2C2520] relative z-0">K</span>
+                </div>
+                <div class="font-bold text-[#2C2520] mb-1">K.Studio_</div>
+                <div class="text-xs text-[#8C7D74] mb-4">粉絲: 1.2k | 主打平價特惠</div>
+                <button class="text-sm font-medium text-[#C9A99A]">進入主頁</button>
+            </div>
+            <div class="profile-card" onclick="openProfile('C')">
+                <div class="avatar bg-[#D4C4B0] overflow-hidden relative">
+                    <img src="images/avatar_C.jpg" alt="Y" class="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" onerror="this.style.opacity=0">
+                    <span class="text-white relative z-0">Y</span>
+                </div>
+                <div class="font-bold text-[#2C2520] mb-1">Yu_Nail_Design</div>
+                <div class="text-xs text-[#8C7D74] mb-4">粉絲: 4.5k | 專注細節保養</div>
+                <button class="text-sm font-medium text-[#C9A99A]">進入主頁</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 主頁調查畫面 -->
+    <div id="investigate-screen" class="hidden fade-in">
+        <div class="flex justify-between items-center mb-6">
+            <button onclick="showScreen('selection-screen')" class="text-sm text-[#8C7D74] flex items-center hover:text-[#2C2520]">
+                <i data-lucide="chevron-left" class="w-4 h-4 mr-1"></i> 返回列表
+            </button>
+            <div class="text-sm font-bold text-[#C9A99A]" id="clue-counter">已調查線索: 0/3</div>
+        </div>
+
+        <div class="bg-white border border-[#EDE8DF] rounded-xl p-6 relative">
+            <div class="ig-header">
+                <div class="avatar" id="inv-avatar"></div>
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-[#2C2520] mb-3" id="inv-name"></h3>
+                    <div class="ig-stats">
+                        <div><span id="inv-posts"></span>貼文</div>
+                        <div><span id="inv-followers"></span>粉絲</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 發光線索區塊 -->
+            <div class="ig-bio pulse-clue" id="clue-bio" onclick="discoverClue('bio')"></div>
+
+            <div class="ig-highlights pulse-clue" id="clue-highlight" onclick="discoverClue('highlight')">
+                <!-- Highlight circles injected via JS -->
+            </div>
+
+            <div class="ig-grid pulse-clue" id="clue-photo" onclick="discoverClue('photo')">
+                <!-- Photos injected via JS -->
+            </div>
+        </div>
+
+        <div class="text-center mt-8">
+            <p class="text-sm text-[#8C7D74] mb-4">點選上方發光區域，收集全部 3 個線索</p>
+            <button id="btn-dm" class="btn" disabled onclick="startChat()">發送私訊預約</button>
+        </div>
+    </div>
+
+    <!-- 4. 聊天模擬畫面 -->
+    <div id="chat-screen" class="hidden fade-in">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-[#2C2520]">私訊交涉中...</h2>
+            <p class="text-sm text-[#8C7D74] mt-2">觀察對方的態度與專業度。</p>
+        </div>
+
+        <div class="chat-box shadow-md">
+            <div class="chat-header" id="chat-header-name"></div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages injected here -->
+            </div>
+        </div>
+
+        <div class="flex justify-center gap-4 mt-8" id="chat-actions" style="visibility: hidden;">
+            <button class="btn btn-outline" onclick="showScreen('selection-screen')">覺得不妙，重選一家</button>
+            <button class="btn" onclick="showResult()">確認預約！</button>
+        </div>
+    </div>
+
+    <!-- 5. 最終結果畫面 -->
+    <div id="result-screen" class="hidden fade-in">
+        <div class="text-center">
+            <h2 class="text-3xl font-bold text-[#2C2520] mb-2" id="result-title">預約結果</h2>
+            <p class="text-[#8C7D74] mb-4">這場美甲工作室選擇，你過關了嗎？</p>
+        </div>
+
+        <div class="bg-white border border-[#C9A99A] rounded-xl p-8 max-w-2xl mx-auto mt-12 relative shadow-lg">
+            <div id="result-icon" class="w-16 h-16 bg-[#E8D5CB] rounded-full flex justify-center items-center mx-auto -mt-16 border-4 border-[#F7F3ED] text-white shadow-sm"></div>
+            
+            <h3 class="text-xl font-bold text-[#2C2520] mb-4 mt-6 text-center" id="result-heading"></h3>
+            <p class="text-[#5C4F46] leading-relaxed mb-6 text-left" id="result-desc"></p>
+            
+            <div class="bg-[#FAF8F5] border-l-4 border-[#C9A99A] p-4 mb-6 text-left font-serif italic text-[#5C4F46]" id="result-quote"></div>
+
+            <div class="text-left border-t border-[#EDE8DF] pt-4">
+                <p class="text-sm font-bold text-[#C9A99A] mb-3">避雷分析指南：</p>
+                <ul class="text-sm text-[#8C7D74] list-disc pl-5 space-y-2" id="result-tips"></ul>
+            </div>
+        </div>
+
+        <div class="text-center mt-8">
+            <button class="btn" onclick="location.reload()">再玩一次</button>
+        </div>
+    </div>
+
+    <!-- Modal (線索提示) -->
+    <div id="clue-modal" class="modal-overlay hidden">
+        <div class="modal-content fade-in">
+            <div class="w-12 h-12 rounded-full bg-[#E8D5CB] flex items-center justify-center mx-auto mb-4 text-[#2C2520]">
+                <i data-lucide="search"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2 text-[#2C2520]" id="modal-title"></h3>
+            <p class="text-[#5C4F46] text-sm leading-relaxed mb-6" id="modal-text"></p>
+            <button class="btn" onclick="closeModal()">記下線索</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    lucide.createIcons();
+
+    // 遊戲資料庫：預留所有的圖片路徑，若無圖片則 fallback 顯示文字
+    const GAME_DATA = {
+        'A': {
+            name: 'Mia_Nails_Art', avatar: 'M', avatarBg: 'bg-[#C9A99A]', posts: '420', followers: '18.5k',
+            avatarImg: 'images/avatar_A.jpg',
+            bio: '🌟 仙女製造機 | 完美主義者<br>❌ 不接急單 ❌ 遲到取消不退費<br>✨ 打造無瑕光澤感',
+            highlights: ['美圖', '日常', '客人'],
+            hlImgs: ['images/hl_A_1.jpg', 'images/hl_A_2.jpg', 'images/hl_A_3.jpg'],
+            photos: ['貓眼發光', '浮誇水鑽', '腮紅暈染', '碎鑽漸層', '金屬鏡面', '極光冰塊'],
+            photoImgs: [
+                'images/post_A_1.jpg', 'images/post_A_2.jpg', 'images/post_A_3.jpg',
+                'images/post_A_4.jpg', 'images/post_A_5.jpg', 'images/post_A_6.jpg'
+            ],
+            clues: {
+                bio: { title: '⚠️ 避責條款？', text: '「完美主義者退散」這句常見的免責聲明，有時是美甲師用來合理化自己技術不穩定的擋箭牌。' },
+                highlight: { title: '⚠️ 只有美圖無過程', text: '精選動態全都是客人的美美完工照或是炫富照，卻沒有任何關於工具消毒、耗材或施作過程的分享，透明度極低。' },
+                photo: { title: '⚠️ 修圖過度', text: '照片邊緣模糊，手指皮膚毫無紋理甚至像假人。這通常是為了掩飾指甲邊緣沒有處理乾淨（如溢膠）而使用的強烈濾鏡與過度磨皮。' }
+            },
+            chatReply: '可以喔，請先匯款全額訂金。注意事項請看首頁，遲到一分鐘直接取消且不退費，現場若覺得有瑕疵概不負責喔！',
+            result: {
+                icon: '<i data-lucide="image-off" class="w-8 h-8 text-[#2C2520]"></i>',
+                heading: '踩中「修圖陷阱」！',
+                desc: '到了現場才發現，美甲師動作粗魯且狂推銷。成品跟照片完全不一樣，邊緣都是溢膠。當你反應時，她拿出了「完美主義者退散」的條款拒絕補救，甚至你的手指還被磨破皮了！',
+                quote: '「預約時只看 IG 作品風格，容易落入『修圖陷阱』，除了成品落差極大外，甚至可能承擔受傷的風險。」—— 消費者 倪倪',
+                tips: [
+                    '小心「仙氣過重」的照片，注意手指關節是否有合理的皮膚紋理。',
+                    '觀察指甲根部（甘皮處）是否清晰乾淨，沒有被濾鏡模糊。',
+                    '態度極度強硬且規矩嚴苛的店家，若發生消費糾紛通常難以溝通。'
+                ]
+            }
+        },
+        'B': {
+            name: 'K.Studio_', avatar: 'K', avatarBg: 'bg-[#EDE8DF]', posts: '45', followers: '1.2k',
+            avatarImg: 'images/avatar_B.jpg',
+            bio: '💅 新手美甲師請多指教<br>🎉 本月單色只要 $399！<br>🎓 提供零基礎美甲教學',
+            highlights: ['價目表', '教學', '空檔'],
+            hlImgs: ['images/hl_B_1.jpg', 'images/hl_B_2.jpg', 'images/hl_B_3.jpg'],
+            photos: ['邊緣不齊', '建構過厚', '亮片不均', '甲型不均', '手抖法式', '跳色溢膠'],
+            photoImgs: [
+                'images/post_B_1.jpg', 'images/post_B_2.jpg', 'images/post_B_3.jpg',
+                'images/post_B_4.jpg', 'images/post_B_5.jpg', 'images/post_B_6.jpg'
+            ],
+            clues: {
+                bio: { title: '⚠️ 開業即開課？', text: '自稱新手卻已經開始招收「零基礎學生」。在目前台灣缺乏統一門檻的市場中，授課者資歷不深是很大的隱憂。' },
+                highlight: { title: '⚠️ 缺乏作品累積', text: '版面上多是粗糙的特價廣告、空檔表與招生資訊，實際的作品展示非常少，難以判斷其真實技術水平。' },
+                photo: { title: '⚠️ 異常低價與粗糙細節', text: '$399 遠低於市場行情。仔細看照片，甲面不平整、甘皮處有死皮與溢膠。極低價通常伴隨高風險，可能是拿客人的手當練習。' }
+            },
+            chatReply: '現在特價$399喔！我雖然剛學沒多久，速度比較慢（大概要4小時），但我一定會努力幫你做到好的！',
+            result: {
+                icon: '<i data-lucide="alert-triangle" class="w-8 h-8 text-[#2C2520]"></i>',
+                heading: '遇到技術不穩定的新手！',
+                desc: '你花了近四個小時枯坐在那，最後只得到一個凹凸不平且邊緣溢膠的單色指甲。更讓你驚訝的是，這位美甲師自己技術都還不穩定，竟然在旁邊的白板上寫著下個月的美甲課程大綱。',
+                quote: '「如果我是一個初學者，根本不會知道老師需要具備多少知識才能教會自己。授課者本身專業仍未成熟，可能白白浪費時間與學費。」—— 美甲師 Wendy',
+                tips: [
+                    '價格遠低於市場行情通常伴隨風險，需有當「練習模特」的心理準備。',
+                    '現在台灣開課無門檻，看到「收學生」不代表技術好，需檢視其真實資歷與證照。',
+                    '留意作品的厚薄度與平整度，這比顏色搭配更能看出基本功。'
+                ]
+            }
+        },
+        'C': {
+            name: 'Yu_Nail_Design', avatar: 'Y', avatarBg: 'bg-[#D4C4B0]', posts: '120', followers: '4.5k',
+            avatarImg: 'images/avatar_C.jpg',
+            bio: '🌿 專注日式極致前置保養<br>🏥 器具皆經醫療級高溫滅菌<br>📜 TNA合格/JNEC檢定',
+            highlights: ['消毒流程', '使用耗材', '證照展示'],
+            hlImgs: ['images/hl_C_1.jpg', 'images/hl_C_2.jpg', 'images/hl_C_3.jpg'],
+            photos: ['完美透膚', '精緻玳瑁', '無瑕漸層', '極細法式', '乾淨貓眼', '手繪花磚'],
+            photoImgs: [
+                'images/post_C_1.jpg', 'images/post_C_2.jpg', 'images/post_C_3.jpg',
+                'images/post_C_4.jpg', 'images/post_C_5.jpg', 'images/post_C_6.jpg'
+            ],
+            clues: {
+                bio: { title: '✨ 專業認證', text: '標示具備國家級 TNA 與國際級 JNEC 證照。雖然證照不能代表全部審美，但絕對能保證基礎的衛生與安全觀念。' },
+                highlight: { title: '✨ 資訊透明', text: '主動將「高溫滅菌流程」與「使用耗材」放在精選動態，代表店家願意負責任並讓消費者安心。' },
+                photo: { title: '✨ 展現實力', text: '敢放「原相機極致微距近照」，且指甲周圍的甘皮處理得乾淨無死角，不依賴濾鏡，代表對自己的基礎保養技術非常有自信。' }
+            },
+            chatReply: '您好！沒問題。預約前想先跟您確認指甲是否有受傷或感染狀況呢？另外，我們使用的是日系檢驗合格膠，施作過程約需2.5小時，請預留時間喔！',
+            result: {
+                icon: '<i data-lucide="shield-check" class="w-8 h-8 text-[#2C2520]"></i>',
+                heading: '恭喜！找到注重細節的專業美甲師',
+                desc: '這次體驗非常棒！美甲師主動告知使用的耗材品牌。前置保養非常仔細，工具也是從高溫消毒袋中拿出來的。指甲平整且維持了超過一個月，讓你感到這筆錢花得非常值得。',
+                quote: '「法規應明文規範禁用檢驗未合格的甲膠，店家也應主動公開使用的耗材成分。我也會觀察器具是否經過高溫滅菌或酒精消毒。」—— 消費者 倪倪',
+                tips: [
+                    '優先選擇願意公開「消毒流程」與「耗材品牌（重金屬、甲醛檢測）」的店家。',
+                    '作品照片敢放「原相機近照」，看出指緣乾淨度，才是真功夫。',
+                    '事前溝通願意了解顧客指甲健康狀況的從業者，通常更具備專業素養。'
+                ]
+            }
+        }
+    };
+
+    // 狀態管理
+    let currentProfile = null;
+    let cluesFound = new Set();
+
+    // 切換頁面
+    function showScreen(screenId) {
+        document.querySelectorAll('.game-container > div:not(.modal-overlay)').forEach(el => el.classList.add('hidden'));
+        document.getElementById(screenId).classList.remove('hidden');
+        window.scrollTo(0, 0);
+    }
+
+    // 展開 IG 帳號主頁並渲染資料
+    function openProfile(id) {
+        currentProfile = id;
+        cluesFound.clear();
+        document.getElementById('clue-counter').innerText = '已調查線索: 0/3';
+        document.getElementById('btn-dm').disabled = true;
+
+        const data = GAME_DATA[id];
+        
+        // 渲染大頭貼與背景
+        const avatarEl = document.getElementById('inv-avatar');
+        avatarEl.innerHTML = `
+            <img src="${data.avatarImg}" class="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" onerror="this.style.opacity=0">
+            <span class="relative z-0">${data.avatar}</span>
+        `;
+        avatarEl.className = `avatar overflow-hidden relative ${data.avatarBg} ${id === 'B' ? 'text-[#2C2520]' : 'text-white'}`;
+        
+        document.getElementById('inv-name').innerText = data.name;
+        document.getElementById('inv-posts').innerText = data.posts;
+        document.getElementById('inv-followers').innerText = data.followers;
+        
+        // 渲染調查區塊並重置狀態
+        const bioEl = document.getElementById('clue-bio');
+        bioEl.innerHTML = data.bio;
+        bioEl.classList.remove('investigated');
+        
+        const hlEl = document.getElementById('clue-highlight');
+        hlEl.innerHTML = data.highlights.map((h, i) => `
+            <div class="flex flex-col items-center gap-1.5">
+                <div class="highlight-circle relative overflow-hidden bg-[${data.avatarBg.replace('bg-[', '').replace(']', '')}] bg-opacity-20">
+                    <img src="${data.hlImgs[i]}" class="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" onerror="this.style.opacity=0">
+                    <span class="relative z-0 text-center text-lg font-serif opacity-40">${h.substring(0,1)}</span>
+                </div>
+                <span class="text-[11px] text-[#5C4F46] font-medium tracking-wide">${h}</span>
+            </div>
+        `).join('');
+        hlEl.classList.remove('investigated');
+
+        const photoEl = document.getElementById('clue-photo');
+        const bgColors = ['bg-[#C9A99A]', 'bg-[#E8D5CB]', 'bg-[#D4C4B0]', 'bg-[#5C4F46]', 'bg-[#8C7D74]', 'bg-[#EDE8DF]'];
+        photoEl.innerHTML = data.photos.map((p, i) => `
+            <div class="ig-photo relative overflow-hidden ${bgColors[i % bgColors.length]}">
+                <img src="${data.photoImgs[i]}" class="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" onerror="this.style.opacity=0">
+                <span class="relative z-0 text-white text-center p-1 font-medium tracking-widest">${p}</span>
+            </div>
+        `).join('');
+        photoEl.classList.remove('investigated');
+
+        showScreen('investigate-screen');
+    }
+
+    // 發現線索
+    function discoverClue(type) {
+        const data = GAME_DATA[currentProfile].clues[type];
+        
+        // 標記已調查
+        document.getElementById(`clue-${type}`).classList.add('investigated');
+        cluesFound.add(type);
+        
+        // 更新計數器 (必須找出3個)
+        document.getElementById('clue-counter').innerText = `已調查線索: ${cluesFound.size}/3`;
+        if (cluesFound.size >= 3) {
+            document.getElementById('btn-dm').disabled = false;
+        }
+
+        // 顯示 Modal
+        document.getElementById('modal-title').innerText = data.title;
+        document.getElementById('modal-text').innerText = data.text;
+        document.getElementById('clue-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('clue-modal').classList.add('hidden');
+    }
+
+    // 開始模擬對話
+    function startChat() {
+        showScreen('chat-screen');
+        document.getElementById('chat-header-name').innerText = GAME_DATA[currentProfile].name;
+        const msgContainer = document.getElementById('chat-messages');
+        msgContainer.innerHTML = '';
+        document.getElementById('chat-actions').style.visibility = 'hidden';
+
+        // 模擬對話時序，增加代入感
+        setTimeout(() => {
+            appendMessage('me', '你好，想預約下週末做單色～');
+            
+            setTimeout(() => {
+                const typingEl = document.createElement('div');
+                typingEl.className = 'typing';
+                typingEl.id = 'typing-indicator';
+                typingEl.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+                msgContainer.appendChild(typingEl);
+                msgContainer.scrollTop = msgContainer.scrollHeight;
+
+                setTimeout(() => {
+                    document.getElementById('typing-indicator').remove();
+                    appendMessage('them', GAME_DATA[currentProfile].chatReply);
+                    document.getElementById('chat-actions').style.visibility = 'visible';
+                }, 2500); // 模擬對方打字時間
+            }, 1000);
+        }, 500);
+    }
+
+    function appendMessage(sender, text) {
+        const msgContainer = document.getElementById('chat-messages');
+        const el = document.createElement('div');
+        el.className = `bubble ${sender} fade-in`;
+        el.innerText = text;
+        msgContainer.appendChild(el);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+
+    // 顯示最終結果
+    function showResult() {
+        const data = GAME_DATA[currentProfile].result;
+        
+        document.getElementById('result-icon').innerHTML = data.icon;
+        document.getElementById('result-heading').innerText = data.heading;
+        document.getElementById('result-desc').innerText = data.desc;
+        document.getElementById('result-quote').innerText = data.quote;
+        
+        document.getElementById('result-tips').innerHTML = data.tips.map(t => `<li>${t}</li>`).join('');
+
+        showScreen('result-screen');
+        lucide.createIcons();
+    }
+</script>
+</body>
+</html>
